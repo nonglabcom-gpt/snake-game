@@ -1,0 +1,2092 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07111d">
+<title>Snake Game</title>
+<style>
+:root{color-scheme:dark;--bg:#07111d;--panel:#101f30;--line:#29445c;--mint:#6fffc0;--cyan:#65dfff;--muted:#9bb2c8}
+*{box-sizing:border-box}html,body{margin:0;width:100%;min-height:100%;background:var(--bg);color:#f2f8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+body{background:radial-gradient(ellipse at 50% -20%,#1a3a51 0,#07111d 58%);overscroll-behavior:none}
+.app{width:min(100%,760px);margin:auto;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 2px}
+h1{font-size:20px;margin:0;letter-spacing:.3px}.sub{font-size:11px;color:var(--muted);margin-top:2px}
+.status{font-size:11px;color:var(--mint);border:1px solid #28634f;background:#0c2b28;padding:7px 9px;border-radius:99px;white-space:nowrap}
+.card{background:linear-gradient(155deg,#14283d,#0d1928);border:1px solid var(--line);border-radius:16px;padding:11px;box-shadow:0 12px 34px #0005}
+.game-wrap{position:relative;overflow:hidden;border-radius:12px;background:#081522;border:1px solid #29455e}
+canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none}
+.overlay{position:absolute;top:9px;left:9px;right:9px;display:flex;justify-content:space-between;pointer-events:none;gap:6px}
+.tag{font-size:10px;background:#07111de8;border:1px solid #31516a;padding:6px 8px;border-radius:8px;color:#d8efff}
+.stats{display:grid;grid-template-columns:1fr;gap:7px;margin-top:9px}.stats.score-only .stat{max-width:none}
+.stat{background:#091624;border:1px solid #20384e;border-radius:10px;padding:8px}.stat small{display:block;color:var(--muted);font-size:10px}.stat b{font-size:17px}
+.progress{height:7px;background:#263b50;border-radius:10px;margin-top:9px;overflow:hidden}.progress span{display:block;height:100%;width:1%;background:linear-gradient(90deg,#2ad99a,#65dfff)}
+.controls{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:7px;margin-top:10px}
+button{min-height:42px;border:1px solid #36536e;border-radius:10px;background:#172d44;color:#f4f9ff;font-weight:700;font-size:12px;padding:9px 7px}
+button.primary{background:linear-gradient(120deg,#087e62,#126c91);border:0}button:active{transform:scale(.98)}
+.secondary{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.creator-credit{
+ display:flex;align-items:center;justify-content:center;
+ min-height:42px;padding:8px 6px;
+ color:#9bb2c8;font-size:12px;font-weight:700;
+ letter-spacing:.35px;text-align:center;
+}
+.info{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info .card{padding:10px}.info h2{font-size:12px;margin:0 0 7px}
+.small{font-size:10px;line-height:1.45;color:var(--muted)}
+.gift-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.gift-buttons button{font-size:10px;min-height:36px;padding:5px}
+.log{max-height:85px;overflow:auto;font-size:10px;color:#c9dcec}.log div{padding:4px 0;border-bottom:1px solid #203448}
+footer{text-align:center;font-size:10px;color:#7890a8;padding:12px 4px}
+.win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:#06101de8}
+.win strong{font-size:34px;color:#ffe18a}.win span{font-size:12px;margin-top:6px}.win b{font-size:22px;color:#ffe18a;margin-top:8px}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;top:-18px;width:8px;height:13px;border-radius:2px;animation:confettiFall 4.1s ease-in forwards}
+@keyframes confettiFall{to{transform:translate3d(var(--drift),760px,0) rotate(900deg);opacity:.9}}
+.win strong{position:relative;z-index:2;text-shadow:0 3px 12px #000}
+.win span,.win b{position:relative;z-index:2}
+
+
+
+body.game-fullscreen header,body.game-fullscreen .stats,body.game-fullscreen .progress,
+body.game-fullscreen .controls,body.game-fullscreen .secondary,body.game-fullscreen aside,
+body.game-fullscreen footer{display:none!important}
+
+
+
+
+
+
+
+
+
+@media(min-width:620px){.app{padding:12px}.main{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;align-items:start}.info{display:block;margin-top:0}.info .card{margin-bottom:10px}}
+
+
+
+
+
+
+
+
+
+/* Fullscreen HUD positioning overrides */
+
+
+
+
+
+
+/* v4.1: Fullscreen HUD is a real DOM group above the game board */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* v4.1 fullscreen HUD: same typography and equal-size cards in one row */
+
+
+
+
+
+
+
+
+
+/* v5.2.1 mobile layout: compact control area below the board */
+@media(max-width:619px){
+ .app{padding-left:8px!important;padding-right:8px!important}
+ .main{display:block!important}
+ .main>section.card{padding:8px!important}
+ .game-wrap{margin:0!important}
+ .stats{margin-top:6px!important;gap:5px!important}
+ .stat{padding:6px 9px!important}
+ .stat small{font-size:9px!important}
+ .stat b{font-size:16px!important;line-height:1.1!important}
+ 
+ 
+ .controls{margin-top:6px!important;gap:6px!important}
+ .controls button,.secondary button{min-height:38px!important;padding:7px 5px!important;font-size:11px!important}
+ .secondary{margin-top:6px!important;gap:6px!important}
+ .info{display:block!important;margin-top:6px!important}
+ .info .card{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)!important;
+   align-items:center!important;
+   column-gap:8px!important;
+   row-gap:3px!important;
+   padding:8px!important;
+   margin:0!important
+ }
+ .info h2{grid-column:1!important;grid-row:1!important;margin:0!important;font-size:11px!important}
+ .info .small{grid-column:1!important;grid-row:2!important;font-size:9px!important;line-height:1.25!important}
+ .info .gift-buttons{grid-column:2!important;grid-row:1 / span 2!important;margin:0!important;gap:4px!important}
+ .info .gift-buttons button{min-height:34px!important;padding:4px 2px!important;font-size:10px!important}
+ footer{display:none!important}
+}
+
+
+
+/* v5.9 fullscreen layout: compact top HUD + centered square board on portrait Android */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.health-stat b{color:#ff668c!important;letter-spacing:0!important}
+.gift-buttons button{border-color:rgba(255,105,85,.45)!important}
+
+
+/* v6.1 HUD balance refinement */
+
+
+
+
+
+
+
+
+/* v6.2: prevent TIME REMAINING and countdown from colliding on narrow fullscreen screens */
+
+
+
+
+
+
+
+/* v6.4: unmistakable low-health HUD warning */
+@keyframes healthCriticalPulse{
+  0%,100%{background:rgba(112,18,42,.42);border-color:rgba(255,86,120,.72);box-shadow:0 0 5px rgba(255,55,95,.18)}
+  50%{background:rgba(145,22,51,.72);border-color:rgba(255,115,145,1);box-shadow:0 0 18px rgba(255,55,95,.48)}
+}
+.health-stat.health-critical,
+body.game-fullscreen .fullscreen-hud .health-stat.health-critical{
+  background:rgba(112,18,42,.58)!important;
+  border:1px solid rgba(255,86,120,.98)!important;
+  color:#ffd6df!important;
+  animation:healthCriticalPulse .85s ease-in-out infinite!important;
+}
+.health-stat.health-critical small,
+body.game-fullscreen .fullscreen-hud .health-stat.health-critical small{
+  color:#ffc0ce!important;
+}
+.health-stat.health-critical b,
+body.game-fullscreen .fullscreen-hud .health-stat.health-critical b{
+  color:#ff7899!important;
+  text-shadow:0 0 10px rgba(255,85,125,.72)!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .health-stat.health-critical{animation:none!important;background:rgba(145,22,51,.72)!important}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Pause CSS-only HUD animation as well as the JavaScript render loop. */
+body.game-paused .health-stat.health-critical{
+  animation:none!important;
+}
+
+
+.sound-panel{margin-top:9px;padding:12px 13px;border:1px solid #29445c;border-radius:13px;background:linear-gradient(155deg,#14283d,#0d1928);box-shadow:0 8px 22px #0004}
+.sound-panel[hidden]{display:none}
+.sound-panel-title{font-size:11px;font-weight:800;letter-spacing:.7px;color:#8fe8cb;margin-bottom:8px}
+.sound-option,.sound-volume{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;color:#e4f0fa;font-size:12px}
+.sound-option input{width:18px;height:18px;accent-color:#57dca9}
+.sound-volume{display:block}
+.sound-volume span{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px}
+.sound-volume b{color:#8fe8cb;font-variant-numeric:tabular-nums}
+.sound-volume input{width:100%;accent-color:#57dca9}
+.sound-hint{font-size:10px;color:#91a9bd;margin-top:5px}
+
+/* Fullscreen layout, HUD and controls — consolidated v6.19 */
+body.game-fullscreen {
+  overflow: hidden;
+  background: #050b12;
+  --snake-board-size: min(calc(100vw - 12px),100dvh);
+  --snake-free-gap: max(0px,calc((100dvh - var(--snake-board-size)) / 2));
+}
+body.game-fullscreen #soundPanel { display: none !important; }
+body.game-fullscreen .app {
+  position: fixed;
+  inset: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body.game-fullscreen header,
+body.game-fullscreen .stats,
+body.game-fullscreen .progress,
+body.game-fullscreen .controls,
+body.game-fullscreen .secondary,
+body.game-fullscreen aside,
+body.game-fullscreen footer {
+  display: none !important;
+}
+body.game-fullscreen .main,
+body.game-fullscreen .main > section {
+  position: fixed;
+  inset: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body.game-fullscreen .fullscreen-board-panel {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  width: min(calc(100vw - 24px), calc(100dvh - 28px));
+  max-height: calc(100dvh - 24px);
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid rgba(130,190,170,.55);
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(19,59,53,.96), rgba(5,32,35,.98));
+  box-shadow: 0 12px 34px #0008;
+  overflow: hidden;
+}
+.fullscreen-board-panel { display: contents; }
+body.game-fullscreen .game-wrap {
+  position: relative;
+  left: auto;
+  top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  transform: none;
+  border: 0;
+  border-radius: 12px;
+  background: #0b302b;
+  overflow: hidden;
+}
+body.game-fullscreen canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+}
+body.game-fullscreen .win { position: fixed; }
+
+/* HUD: three compact cards; the timer is the third card. */
+.fullscreen-hud {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin: 10px 0 12px !important;
+}
+.fullscreen-hud .stats.score-only {
+  display: grid !important;
+  grid-template-columns: minmax(0,.88fr) minmax(0,.92fr) minmax(0,1.35fr) !important;
+  align-items: stretch !important;
+  gap: 7px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 100% !important;
+  margin: 0 !important;
+}
+.fullscreen-hud .stats.score-only .stat {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  padding: 9px 10px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(220,175,90,.6) !important;
+  border-radius: 12px !important;
+  background: rgba(4,18,27,.94) !important;
+  color: #ffe3a1 !important;
+}
+.fullscreen-hud .stats.score-only .stat small {
+  min-width: 0 !important;
+  font-size: clamp(8px,2.1vw,11px) !important;
+  color: #ffe3a1 !important;
+  letter-spacing: -.25px !important;
+  white-space: nowrap !important;
+}
+.fullscreen-hud .stats.score-only .stat b,
+.fullscreen-hud .stats.score-only #huntTime {
+  flex: 0 0 auto !important;
+  font-size: clamp(12px,3vw,16px) !important;
+  white-space: nowrap !important;
+}
+.fullscreen-hud .stats.score-only #huntTimer {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 9px 8px !important;
+  box-sizing: border-box !important;
+  gap: 5px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(130,190,170,.7) !important;
+  background: rgba(4,18,27,.94) !important;
+  color: #c7d9d5 !important;
+}
+.fullscreen-hud .stats.score-only #huntTimer small { color: #9bb2c8 !important; }
+.fullscreen-hud #fullscreenScore { display: none !important; }
+
+/* In fullscreen, the HUD sits directly below the board. */
+body.game-fullscreen .fullscreen-hud {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  z-index: 5 !important;
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 8px 0 0 !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+body.game-fullscreen .fullscreen-hud .stats.score-only {
+  display: grid !important;
+  grid-template-columns: minmax(0,.9fr) minmax(0,1fr) minmax(0,.95fr) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+body.game-fullscreen .fullscreen-hud .stats.score-only .stat,
+body.game-fullscreen .fullscreen-hud .stats.score-only #huntTimer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  height: 52px !important;
+  padding: 6px 5px !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  background: rgba(4,18,27,.92) !important;
+  border: 1px solid rgba(220,175,90,.65) !important;
+}
+body.game-fullscreen .fullscreen-hud .stats.score-only #huntTimer {
+  background: rgba(4,18,27,.92) !important;
+  border: 1px solid rgba(130,190,170,.7) !important;
+}
+body.game-fullscreen .fullscreen-hud .stats.score-only .stat small,
+body.game-fullscreen .fullscreen-hud .stats.score-only #huntTimer small {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  font-size: clamp(8px,2.3vw,11px) !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+body.game-fullscreen .fullscreen-hud .stats.score-only .stat b,
+body.game-fullscreen .fullscreen-hud .stats.score-only #huntTimer b,
+body.game-fullscreen .fullscreen-hud .stats.score-only #huntTime {
+  display: block !important;
+  flex: none !important;
+  font-size: clamp(14px,3.5vw,18px) !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+body.game-fullscreen .fullscreen-hud #fullscreenScore { display: none !important; }
+
+@media (max-width: 420px) {
+  body.game-fullscreen .fullscreen-board-panel {
+    width: calc(100vw - 18px);
+    padding: 7px;
+  }
+  body.game-fullscreen .fullscreen-hud {
+    gap: 6px !important;
+    margin-top: 7px !important;
+  }
+}
+
+/* Fullscreen Start/Pause and directional pad. */
+.fullscreen-game-controls { display: none; }
+body.game-fullscreen .fullscreen-game-controls {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 60 !important;
+  display: block !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+body.game-fullscreen .fullscreen-game-top {
+  position: fixed !important;
+  left: 50% !important;
+  top: calc(var(--snake-free-gap) / 2 + 21px) !important;
+  bottom: auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  width: min(220px,72vw) !important;
+  transform: translateX(-50%) !important;
+  pointer-events: auto !important;
+}
+body.game-fullscreen .fullscreen-game-top button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  padding: 9px 16px !important;
+  border: 1px solid rgba(145,190,210,.42);
+  border-radius: 14px !important;
+  background: rgba(13,35,53,.92);
+  color: #f1f7fb;
+  font-weight: 800;
+  box-shadow: 0 4px 15px #0008;
+  backdrop-filter: blur(8px);
+  pointer-events: auto !important;
+}
+body.game-fullscreen .fullscreen-game-top button.primary {
+  background: linear-gradient(135deg,#087e69,#147c9c);
+}
+.gamepad {
+  display: grid;
+  grid-template-columns: repeat(3,70px);
+  grid-template-rows: repeat(3,58px);
+  gap: 6px;
+  align-content: center;
+  justify-content: center;
+  width: 222px;
+  height: 190px;
+  filter: drop-shadow(0 5px 12px #0009);
+  pointer-events: auto;
+}
+.gamepad button {
+  min-width: 0;
+  min-height: 56px !important;
+  padding: 0;
+  border: 1px solid rgba(175,220,235,.68);
+  border-radius: 17px;
+  background: linear-gradient(155deg,rgba(31,67,91,.97),rgba(11,34,53,.97));
+  color: #f4fbff;
+  font-size: 27px;
+  font-weight: 900;
+  touch-action: manipulation !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.15), 0 3px 8px #0006;
+  transition: background .08s,border-color .08s,box-shadow .08s,transform .08s;
+}
+.gamepad button:active {
+  transform: scale(.94);
+  background: rgba(126,82,210,.98);
+  border-color: #e0d0ff;
+  box-shadow: 0 0 18px rgba(157,105,255,.62), inset 0 2px 5px #0005;
+}
+.gamepad .pad-up { grid-column: 2; grid-row: 1; }
+.gamepad .pad-left { grid-column: 1; grid-row: 2; }
+.gamepad .pad-down { grid-column: 2; grid-row: 2; }
+.gamepad .pad-right { grid-column: 3; grid-row: 2; }
+.gamepad button.direction-active,
+.gamepad button.direction-manual {
+  background: rgba(126,82,210,.96) !important;
+  border-color: #d0b8ff !important;
+  color: #fff !important;
+  box-shadow: 0 0 16px rgba(157,105,255,.55), inset 0 1px 0 rgba(255,255,255,.32) !important;
+}
+.gamepad button:disabled { opacity: 1; }
+.gamepad button:focus-visible {
+  outline: 3px solid #d0b8ff;
+  outline-offset: 2px;
+}
+body.game-fullscreen .gamepad {
+  position: fixed !important;
+  left: 50% !important;
+  top: auto !important;
+  bottom: calc(var(--snake-free-gap) / 2 - 95px + env(safe-area-inset-bottom)) !important;
+  width: 174px !important;
+  height: 150px !important;
+  margin: 0 !important;
+  transform: translateX(-50%) !important;
+  pointer-events: auto !important;
+}
+@media (max-height: 720px) {
+  body.game-fullscreen .fullscreen-game-top {
+    top: max(6px,calc(var(--snake-free-gap) / 2 + 25px)) !important;
+  }
+  body.game-fullscreen .fullscreen-game-top button {
+    min-height: 38px !important;
+    padding: 6px 12px !important;
+  }
+  body.game-fullscreen .gamepad {
+    bottom: max(6px,calc(var(--snake-free-gap) / 2 - 74px + env(safe-area-inset-bottom))) !important;
+    height: 118px !important;
+    transform: translateX(-50%) scale(.78) !important;
+    transform-origin: bottom center !important;
+  }
+}
+@media (max-width: 380px) {
+  body.game-fullscreen .gamepad {
+    transform: translateX(-50%) scale(.88) !important;
+    transform-origin: bottom center !important;
+  }
+}
+</style>
+<meta name="app-version" content="6.21-audit-cleanup">
+<meta name="app-build" content="6.21-audit-cleanup-stable-body">
+</head>
+<body>
+<div class="app">
+<header><div><h1>🐍 Snake Game</h1></div><div class="status" id="status">● READY</div></header>
+<div class="main">
+<section class="card">
+ <div class="fullscreen-board-panel">
+ <div class="game-wrap">
+  <canvas id="board" width="720" height="720"></canvas>
+  <div class="fullscreen-game-controls" id="fullscreenGameControls">
+   <div class="gamepad" aria-label="Directional controls">
+    <button class="pad-up" data-direction="up" aria-label="Up">▲</button>
+    <button class="pad-left" data-direction="left" aria-label="Left">◀</button>
+    <button class="pad-down" data-direction="down" aria-label="Down">▼</button>
+    <button class="pad-right" data-direction="right" aria-label="Right">▶</button>
+   </div>
+   <div class="fullscreen-game-top">
+    <button id="fsStartPause" class="primary">▶ START</button>
+   </div>
+  </div>
+  <div class="win" id="win"><strong>YOU WIN!</strong><span id="resultText">You won!</span><b id="resultScore">SCORE: 0</b><div class="confetti" id="confetti"></div></div>
+ </div>
+ <div class="fullscreen-hud">
+ <div class="stats score-only">
+  <div class="stat"><small>SCORE</small><b id="score">0</b></div>
+  <div class="stat health-stat"><small>HEALTH</small><b id="health">2/5</b></div>
+ <div id="huntTimer" class="stat hunt-timer"><small>TIME REMAINING</small><b id="huntTime">00:25</b></div>
+ </div>
+<div id="fullscreenScore" class="fullscreen-score" aria-hidden="true"><span>SCORE</span><b id="fullscreenScoreValue">0</b></div>
+
+ </div>
+ </div>
+ <div class="controls">
+  <button class="primary" id="startPause">▶ START</button>
+  <button id="modeToggle">🤖 MODE: AI</button>
+  <button id="reset">↻ NEW GAME</button>
+ </div>
+ <div class="secondary">
+  <button id="full">⛶ FULLSCREEN</button>
+  <button id="speed">⚡ SPEED: NORMAL</button>
+  <button id="soundSettingsToggle" aria-expanded="false">♫ SOUND: ON</button>
+  <div class="creator-credit">Created by Bones</div>
+ </div>
+ <section class="sound-panel" id="soundPanel" hidden aria-label="Sound settings">
+  <div class="sound-panel-title">♫ SOUND SETTINGS</div>
+  <label class="sound-option"><span>Background music</span><input id="musicEnabled" type="checkbox" checked></label>
+  <label class="sound-option"><span>Sound effects</span><input id="sfxEnabled" type="checkbox" checked></label>
+  <label class="sound-volume"><span>Music volume <b id="musicVolumeLabel">60%</b></span><input id="musicVolume" type="range" min="0" max="120" value="60"></label>
+  <label class="sound-volume"><span>Effects volume <b id="sfxVolumeLabel">195%</b></span><input id="sfxVolume" type="range" min="0" max="195" value="195"></label>
+  <label class="sound-volume"><span>Direction keys volume <b id="directionVolumeLabel">65%</b></span><input id="directionVolume" type="range" min="0" max="195" value="65"></label>
+  <div class="sound-hint">Sound starts after your first tap. Settings apply immediately.</div>
+ </section>
+</section>
+<aside class="info">
+ <section class="card">
+  <h2>✨ MAGIC ELEMENTS</h2>
+  <div class="small">Drop 1, 5 or 10 timed bombs onto the board.</div>
+  <div class="gift-buttons" style="margin-top:8px">
+   <button data-bomb="1" title="Thả 1 quả bom">💣 +1</button><button data-bomb="5" title="Thả 5 quả bom">💣 +5</button><button data-bomb="10" title="Thả 10 quả bom">💣 +10</button>
+  </div>
+ </section>
+</aside>
+</div>
+<footer>Snake Game • Garden theme • 10×10 board • 30-second food collection limit • Offline mode • Predictive AI 6.0 • Accurate food simulation / Endgame control / Bounded search • Progress is not saved when the page closes</footer>
+</div>
+<audio id="directionKeySound" preload="auto" src="data:audio/mpeg;base64,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XpmZnLWnazZ7rW/a9ZcMDuxMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>
+<script>
+(()=>{
+const SIZE=10,STEP=66,OFFSET=30,cv=document.getElementById('board'),cx=cv.getContext('2d'),el=id=>document.getElementById(id);
+let lastSoundDirection=null;
+const AI_TURN_REACTION_DELAY=110;
+const HUNT_TIME_LIMIT_MS=30000;
+let aiTurnPendingDirection=null,aiTurnReadyDirection=null;
+let snake=[],foods=[],bombs=[],running=false,won=false,lost=false,controlMode='ai',requestedDirection=null,manualTurnPending=false,manualAwaitingFirstMove=true,loop=null,score=0,restartTimer=null,speed=220,speedIndex=1,lastDir=null,eatFlashUntil=0,timeSinceEatMs=0,lastTickAt=0,fireUntil=0,fireColor='#ff643d',lightningUntil=0,growthDebt=0,slowUntil=0,hasteUntil=0,foodNotice=null,health=2,redScoreUntil=0,nextAutoBombAt=0;
+const speeds=[280,220,150],speedNames=['SLOW','NORMAL','FAST'];
+const foodTypes=['orb','flame-blue','flame-purple','flame-red','lightning','heart'];
+const key=p=>p[0]+','+p[1];
+// Shared immutable directions avoid rebuilding identical arrays during AI path searches.
+const CARDINAL_DIRECTIONS=Object.freeze([[0,1],[1,0],[0,-1],[-1,0]].map(d=>Object.freeze(d)));
+
+
+let atmosphereFrame=0;
+let lastRenderTime=0;
+// Render-only motion history; never read by collision, scoring or AI logic.
+let previousSnake=null,lastMoveAt=0,lastMoveDuration=speed;
+function countOpenArea(start,blocked,limit=SIZE*SIZE){
+ const q=[start],seen=new Set([key(start)]),dirs=CARDINAL_DIRECTIONS;
+ for(let i=0;i<q.length&&seen.size<limit;i++){
+  const p=q[i];
+  for(const d of dirs){
+   const n=[p[0]+d[0],p[1]+d[1]],k=key(n);
+   if(n[0]<0||n[0]>=SIZE||n[1]<0||n[1]>=SIZE||seen.has(k)||blocked.has(k))continue;
+   seen.add(k);q.push(n);
+  }
+ }
+ return seen.size;
+}
+function spawn(n=1){
+ // v5.9: keep exactly one active food on the board at all times.
+ const capacity=Math.max(0,1-foods.length);
+ const count=Math.min(Math.max(0,Math.floor(n)),capacity);
+ if(count===0)return;
+ const occupied=new Set([...snake.map(key),...bombs.map(b=>key([b.r,b.c]))]);
+ foods.forEach(f=>occupied.add(key([f.r,f.c])));
+ const available=[];
+ for(let r=0;r<SIZE;r++){
+  for(let c=0;c<SIZE;c++){
+   const k=key([r,c]);
+   if(!occupied.has(k))available.push({r,c});
+  }
+ }
+ // Purple is a rare growth food and may spawn only while >50 cells are empty.
+ const eligibleFoodTypes=available.length>50?foodTypes:foodTypes.filter(type=>type!=='flame-purple');
+ for(let i=0;i<count&&available.length;i++){
+  const idx=Math.floor(Math.random()*available.length);
+  const cell=available.splice(idx,1)[0];
+  const type=eligibleFoodTypes[Math.floor(Math.random()*eligibleFoodTypes.length)];
+  const roll=Math.random();
+  // 34% chance for a 7-star gem; the remaining 66% is evenly split across 1-6 stars.
+  const stars=roll<0.34?7:1+Math.floor((roll-0.34)/0.66*6);
+  foods.push({...cell,type,stars:type==='orb'?stars:0});
+ }
+}
+function targetFoodCount(){
+ return 1;
+}
+
+function update(){
+ const remaining=Math.max(0,Math.ceil((HUNT_TIME_LIMIT_MS-timeSinceEatMs)/1000));
+ const timeLabel='00:'+String(remaining).padStart(2,'0');
+ const timer=el('huntTime'),timerBox=el('huntTimer');
+ if(timer)timer.textContent=timeLabel;
+ if(timerBox){
+  timerBox.style.color=remaining<=5?'#ff7777':remaining<=10?'#ffd27a':'#c7d9d5';
+  timerBox.style.borderColor=remaining<=5?'rgba(255,100,100,.7)':remaining<=10?'rgba(255,200,100,.55)':'rgba(130,190,170,.22)';
+ }
+ el('score').textContent=score.toLocaleString('en-US');
+ const healthEl=el('health');if(healthEl)healthEl.textContent=health+'/5';
+ const healthCard=healthEl?healthEl.closest('.health-stat'):null;
+ if(healthCard){
+  const critical=health===1;
+  // CSS owns the warning appearance; JavaScript only toggles its state.
+  healthCard.classList.toggle('health-critical',critical);
+ }
+ const fsScore=el('fullscreenScoreValue');if(fsScore)fsScore.textContent=score.toLocaleString('en-US');
+}
+function stop(){
+ running=false;
+ stopBackgroundMusic();
+ aiTurnPendingDirection=null;
+ aiTurnReadyDirection=null;
+ if(loop){clearTimeout(loop);loop=null;}
+ if(atmosphereFrame){cancelAnimationFrame(atmosphereFrame);atmosphereFrame=0;}
+ lastRenderTime=0;
+ document.body.classList.add('game-paused');
+ updateControlUI();
+}
+function reset(){
+ previousSnake=null;lastMoveAt=0;lastMoveDuration=speed;
+ lastSoundDirection=null;pendingDirectionSound=null;
+ stop();if(restartTimer){clearTimeout(restartTimer);restartTimer=null;}
+ const mid=Math.floor(SIZE/2),startCol=Math.max(3,Math.floor(SIZE/2)-1);
+ snake=[[mid,startCol+2],[mid,startCol+1],[mid,startCol],[mid,startCol-1]];
+ foods=[];bombs=[];health=2;redScoreUntil=0;nextAutoBombAt=performance.now()+9000+Math.random()*7000;eatFlashUntil=0;timeSinceEatMs=0;lastTickAt=0;score=0;won=false;lost=false;lastDir=[0,1];fireUntil=0;lightningUntil=0;fireColor='#ff643d';growthDebt=0;slowUntil=0;hasteUntil=0;foodNotice=null;
+ el('win').style.display='none';
+ el('win').innerHTML='<strong>YOU WIN!</strong><span id="resultText">You won!</span><b id="resultScore">SCORE: 0</b><div class="confetti" id="confetti"></div>';
+ el('status').textContent=controlMode==='ai'?'● READY':'🎮 MANUAL READY';
+ requestedDirection=[0,1];manualTurnPending=false;manualAwaitingFirstMove=controlMode==='manual';
+ spawn(1);update();updateControlUI();draw();
+}
+function findPath(start,goal,blocked){
+ const q=[start],seen=new Set([key(start)]),prev=new Map(),dirs=CARDINAL_DIRECTIONS;
+ let found=false;
+ for(let qi=0;qi<q.length;qi++){
+  const p=q[qi];
+  if(key(p)===key(goal)){found=true;break;}
+  for(const d of dirs){
+   const n=[p[0]+d[0],p[1]+d[1]],nk=key(n);
+   if(n[0]<0||n[0]>=SIZE||n[1]<0||n[1]>=SIZE||seen.has(nk)||blocked.has(nk))continue;
+   seen.add(nk);prev.set(nk,p);q.push(n);
+  }
+ }
+ if(!found)return null;
+ const path=[];let cur=goal;
+ while(key(cur)!==key(start)){path.push(cur);cur=prev.get(key(cur));if(!cur)return null;}
+ return path.reverse();
+}
+function canReachTail(body){
+ if(body.length<2)return true;
+ const head=body[0],tail=body[body.length-1];
+ const blocked=new Set([...body.slice(1,-1).map(key),...activeBombKeys()]);
+ return !!findPath(head,tail,blocked);
+}
+function foodMapFrom(items){
+ const map=new Map();
+ for(const food of items)map.set(key([food.r,food.c]),food.type);
+ return map;
+}
+function advanceBody(body,next,remainingFoods,debt){
+ const nk=key(next),foodType=remainingFoods.get(nk);
+ const eating=foodType!==undefined;
+ const preserveTail=eating||debt>0;
+ const occupied=new Set(body.slice(0,preserveTail?body.length:body.length-1).map(key));
+ if(occupied.has(nk))return null;
+ const nextBody=body.map(p=>p.slice());
+ nextBody.unshift(next.slice());
+ let nextDebt=debt;
+ if(eating){
+  nextDebt+=foodType==='flame-purple'?2:1;
+  remainingFoods.delete(nk);
+ }
+ if(nextDebt>0)nextDebt--;
+ if(!preserveTail)nextBody.pop();
+ return {body:nextBody,growthDebt:nextDebt,eating,foodType};
+}
+function legalStep(next,allowBomb=false){
+ if(next[0]<0||next[0]>=SIZE||next[1]<0||next[1]>=SIZE)return false;
+ if(!allowBomb&&isBombCell(next))return false;
+ const foodMap=foodMapFrom(foods);
+ return !!advanceBody(snake,next,foodMap,growthDebt);
+}
+function simulateBodyPath(initialBody,path){
+ let body=initialBody.map(p=>p.slice()),debt=growthDebt;
+ const remaining=foodMapFrom(foods);
+ for(const next of path){
+  if(isBombCell(next))return null;
+  const state=advanceBody(body,next,remaining,debt);
+  if(!state)return null;
+  body=state.body;debt=state.growthDebt;
+ }
+ return body;
+}
+function bodyOpenArea(body){
+ const blocked=new Set([...body.slice(1,-1).map(key),...activeBombKeys()]);
+ return countOpenArea(body[0],blocked,100);
+}
+function getTailRoute(body){
+ if(body.length<2)return null;
+ const head=body[0],tail=body[body.length-1];
+ const blocked=new Set([...body.slice(1,-1).map(key),...activeBombKeys()]);
+ const path=findPath(head,tail,blocked);
+ return path&&path.length?path:null;
+}
+function makeOneStepBody(next){
+ const state=advanceBody(snake,next,foodMapFrom(foods),growthDebt);
+ return state?state.body:snake.map(p=>p.slice());
+}
+function activeBombKeys(){
+ return new Set(bombs.map(b=>key([b.r,b.c])));
+}
+function isBombCell(p){
+ return bombs.some(b=>b.r===p[0]&&b.c===p[1]);
+}
+function findSafeFoodPlan(){
+ const plans=[],head=snake[0],dirs=CARDINAL_DIRECTIONS;
+ for(const food of foods){
+  for(const d of dirs){
+   const first=[head[0]+d[0],head[1]+d[1]];
+   if(isBombCell(first)||!legalStep(first))continue;
+   const firstBody=makeOneStepBody(first);
+   const blocked=new Set([...firstBody.slice(1,-1).map(key),...activeBombKeys()]);
+   const rest=findPath(firstBody[0],[food.r,food.c],blocked);
+   if(!rest)continue;
+   const path=[first,...rest];
+   // Re-simulate the complete route with ALL food cells and growth events.
+   const finalBody=simulateBodyPath(snake,path);
+   if(!finalBody||!canReachTail(finalBody))continue;
+   const finalArea=bodyOpenArea(finalBody);
+   const congestion=Math.max(0,finalBody.length+4-finalArea);
+   const edgeDistance=Math.min(food.r,food.c,SIZE-1-food.r,SIZE-1-food.c);
+   const edgeBias=snake.length<20?Math.max(0,edgeDistance-1)*0.025:0;
+   const score=path.length+congestion*0.32-
+               Math.min(finalArea,45)*0.03+edgeBias;
+   plans.push({next:first,score,length:path.length,food});
+  }
+ }
+ plans.sort((a,b)=>a.score-b.score);
+ return plans.length?plans[0]:null;
+}
+function simulateTailRoute(path){
+ let body=snake.map(p=>p.slice()),debt=growthDebt;
+ const remaining=foodMapFrom(foods);
+ for(const next of path){
+  if(isBombCell(next))return false;
+  const state=advanceBody(body,next,remaining,debt);
+  if(!state)return false;
+  body=state.body;debt=state.growthDebt;
+ }
+ return canReachTail(body);
+}
+function chooseTailEscape(){
+ const path=getTailRoute(snake);
+ if(path&&path.length&&simulateTailRoute(path))return path[0];
+ return null;
+}
+function evaluatePredictedBody(body,remainingFoods,depth){
+ const area=bodyOpenArea(body);
+ const tailPath=getTailRoute(body);
+ const tailDistance=tailPath?tailPath.length:100;
+ let nearestFood=100;
+ const blocked=new Set([...body.slice(1,-1).map(key),...activeBombKeys()]);
+ for(const foodKey of remainingFoods){
+  const parts=foodKey.split(',').map(Number);
+  const p=findPath(body[0],parts,blocked);
+  if(p&&p.length<nearestFood)nearestFood=p.length;
+ }
+ const trapped=area<body.length+2?100:0;
+ const endgamePenalty=body.length>=70?Math.max(0,body.length+2-area)*2.0:0;
+ return {score:trapped+Math.max(0,body.length+3-area)*1.35+
+   tailDistance*(body.length>=70?0.20:0.11)+nearestFood*0.22+
+   endgamePenalty-depth*0.015-Math.min(area,65)*0.12,
+   area,tailDistance,nearestFood};
+}
+function choosePredictiveMove(){
+ const dirs=CARDINAL_DIRECTIONS,head=snake[0];
+ const dense=snake.length>=70;
+ const maxDepth=dense?3:4,beamWidth=dense?5:8;
+ const initialFoods=foodMapFrom(foods);
+ let beam=[];
+ for(const d of dirs){
+  const p=[head[0]+d[0],head[1]+d[1]];
+  if(!legalStep(p))continue;
+  const remaining=new Map(initialFoods);
+  const state=advanceBody(snake,p,remaining,growthDebt);
+  if(!state||!canReachTail(state.body))continue;
+  const metrics=evaluatePredictedBody(state.body,new Set(remaining.keys()),1);
+  if(metrics.area<Math.min(dense?7:5,state.body.length+1))continue;
+  beam.push({body:state.body,first:p,foods:remaining,growthDebt:state.growthDebt,score:metrics.score});
+ }
+ if(!beam.length)return null;
+ let expansions=0;
+ const expansionLimit=dense?48:80;
+ for(let depth=2;depth<=maxDepth;depth++){
+  const nextBeam=[];
+  for(const node of beam){
+   const h=node.body[0];
+   for(const d of dirs){
+    if(expansions++>=expansionLimit)break;
+    const p=[h[0]+d[0],h[1]+d[1]];
+    if(p[0]<0||p[0]>=SIZE||p[1]<0||p[1]>=SIZE||isBombCell(p))continue;
+    const remaining=new Map(node.foods);
+    const state=advanceBody(node.body,p,remaining,node.growthDebt);
+    if(!state||!canReachTail(state.body))continue;
+    const metrics=evaluatePredictedBody(state.body,new Set(remaining.keys()),depth);
+    if(metrics.area<Math.min(dense?7:5,state.body.length+1))continue;
+    nextBeam.push({body:state.body,first:node.first,foods:remaining,growthDebt:state.growthDebt,score:metrics.score});
+   }
+   if(expansions>=expansionLimit)break;
+  }
+  nextBeam.sort((a,b)=>a.score-b.score);
+  beam=nextBeam.slice(0,beamWidth);
+  if(!beam.length||expansions>=expansionLimit)break;
+ }
+ beam.sort((a,b)=>a.score-b.score);
+ return beam.length?beam[0].first:null;
+}
+function chooseDenseBoardMove(){
+ const head=snake[0],dirs=CARDINAL_DIRECTIONS,options=[];
+ for(const d of dirs){
+  const next=[head[0]+d[0],head[1]+d[1]];
+  if(!legalStep(next))continue;
+  const body=makeOneStepBody(next);
+  if(!canReachTail(body))continue;
+  const area=bodyOpenArea(body);
+  if(area<Math.min(5,body.length+1))continue;
+  let nearestFood=Infinity;const blocked=new Set([...body.slice(1,-1).map(key),...activeBombKeys()]);
+  for(const food of foods){
+   const path=findPath(body[0],[food.r,food.c],blocked);
+   if(path&&path.length)nearestFood=Math.min(nearestFood,path.length);
+  }
+  const tailPath=getTailRoute(body),tailDistance=tailPath?tailPath.length:100;
+  const score=(nearestFood===Infinity?35:nearestFood*1.15)+
+    Math.max(0,body.length+3-area)*1.1+tailDistance*0.08-Math.min(area,55)*0.11;
+  options.push({next,score});
+ }
+ options.sort((a,b)=>a.score-b.score);
+ return options.length?options[0].next:null;
+}
+function chooseSafeFallback(){
+ const head=snake[0],dirs=CARDINAL_DIRECTIONS,options=[];
+ for(const d of dirs){
+  const next=[head[0]+d[0],head[1]+d[1]];
+  if(!legalStep(next))continue;
+  const body=makeOneStepBody(next);
+  if(!canReachTail(body))continue;
+  const area=bodyOpenArea(body);
+  if(area<Math.min(6,body.length+1))continue;
+  const edgeDist=Math.min(next[0],next[1],SIZE-1-next[0],SIZE-1-next[1]);
+  const edgePenalty=snake.length<20?edgeDist*0.7:0;
+  const turnPenalty=lastDir&&(next[0]-head[0]!==lastDir[0]||next[1]-head[1]!==lastDir[1])?0.12:0;
+  options.push({next,score:Math.max(0,snake.length+4-area)*0.9-
+    Math.min(area,50)*0.06+edgePenalty+turnPenalty});
+ }
+ options.sort((a,b)=>a.score-b.score);
+ return options.length?options[0].next:null;
+}
+function chooseEndgameMove(){
+ const head=snake[0],dirs=CARDINAL_DIRECTIONS,options=[];
+ for(const d of dirs){
+  const next=[head[0]+d[0],head[1]+d[1]];
+  if(!legalStep(next))continue;
+  const body=makeOneStepBody(next);
+  if(!canReachTail(body))continue;
+  const area=bodyOpenArea(body);
+  if(area<body.length+1)continue;
+  const tailPath=getTailRoute(body);
+  if(!tailPath)continue;
+  const foodHere=foods.some(f=>f.r===next[0]&&f.c===next[1]);
+  const score=Math.max(0,body.length+2-area)*3+
+    tailPath.length*0.30-Math.min(area,100)*0.16+
+    (foodHere?-0.5:0);
+  options.push({next,score});
+ }
+ options.sort((a,b)=>a.score-b.score);
+ return options.length?options[0].next:null;
+}
+function chooseStrategicMove(){
+ if(snake.length>=86){
+  const endgame=chooseEndgameMove();
+  if(endgame)return endgame;
+ }
+ const foodPlan=findSafeFoodPlan();
+ if(foodPlan&&legalStep(foodPlan.next))return foodPlan.next;
+ if(snake.length>=58||SIZE*SIZE-snake.length<=42){
+  const dense=chooseDenseBoardMove();
+  if(dense)return dense;
+ }
+ const predicted=choosePredictiveMove();
+ if(predicted&&legalStep(predicted))return predicted;
+ const tailStep=chooseTailEscape();
+ if(tailStep&&legalStep(tailStep))return tailStep;
+ return chooseSafeFallback();
+}
+function findRiskAwarePath(start,goal,blocked){
+ const total=SIZE*SIZE,dist=new Float64Array(total),prev=new Int16Array(total);
+ const visited=new Uint8Array(total),dirs=CARDINAL_DIRECTIONS;
+ dist.fill(Infinity);prev.fill(-1);
+ const index=p=>p[0]*SIZE+p[1],startId=index(start),goalId=index(goal);
+ dist[startId]=0;
+ for(let step=0;step<total;step++){
+  let current=-1,best=Infinity;
+  for(let i=0;i<total;i++){
+   if(!visited[i]&&dist[i]<best){best=dist[i];current=i;}
+  }
+  if(current<0||current===goalId)break;
+  visited[current]=1;
+  const r=Math.floor(current/SIZE),c=current%SIZE;
+  for(const d of dirs){
+   const nr=r+d[0],nc=c+d[1];
+   if(nr<0||nr>=SIZE||nc<0||nc>=SIZE)continue;
+   const next=[nr,nc],nid=index(next),nk=key(next);
+   if(visited[nid]||(blocked.has(nk)&&nid!==goalId))continue;
+   const cost=best+(isBombCell(next)?1000:1);
+   if(cost<dist[nid]){dist[nid]=cost;prev[nid]=current;}
+  }
+ }
+ if(!Number.isFinite(dist[goalId]))return null;
+ const path=[];let cur=goalId;
+ while(cur!==startId){
+  if(cur<0)return null;
+  path.push([Math.floor(cur/SIZE),cur%SIZE]);
+  cur=prev[cur];
+ }
+ return path.reverse();
+}
+function chooseLastResortFoodMove(){
+ const head=snake[0],blocked=new Set(snake.slice(1,-1).map(key));
+ let best=null,bestCost=Infinity;
+ for(const food of foods){
+  const path=findRiskAwarePath(head,[food.r,food.c],blocked);
+  if(!path||!path.length||!legalStep(path[0],true))continue;
+  const bombsOnPath=path.reduce((n,p)=>n+(isBombCell(p)?1:0),0);
+  const cost=path.length+bombsOnPath*1000;
+  if(cost<bestCost){bestCost=cost;best=path[0];}
+ }
+ return best;
+}
+function nextMove(){
+ const strategic=chooseStrategicMove();
+ if(strategic&&legalStep(strategic))return strategic;
+ // Risk a bomb only when no bomb-free food route or safe move remains.
+ const risky=chooseLastResortFoodMove();
+ if(risky&&legalStep(risky,true))return risky;
+ const head=snake[0],dirs=CARDINAL_DIRECTIONS;
+ let best=null,bestArea=-1;
+ for(const d of dirs){
+  const p=[head[0]+d[0],head[1]+d[1]];
+  if(!legalStep(p))continue;
+  const body=makeOneStepBody(p),area=bodyOpenArea(body);
+  if(area>bestArea){bestArea=area;best=p;}
+ }
+ return best;
+}
+function effectiveMoveDelay(now=performance.now()){
+ // Blue slows movement by 10%; Lightning speeds it up by 10%.
+ if(now<hasteUntil)return Math.max(65,Math.round(speed*0.90));
+ if(now<slowUntil)return Math.round(speed*1.10);
+ return speed;
+}
+function announceFood(text,color='#fff2a8'){
+ foodNotice={text,color,until:performance.now()+1350};
+}
+function applyFoodEffect(food){
+ const now=performance.now();
+ if(food.type==='flame-blue'){
+  slowUntil=now+2800;
+  announceFood('SLOW  -10%','#8bdcff');
+ }else if(food.type==='flame-purple'){
+  announceFood('+2 LENGTH','#e2a6ff');
+ }else if(food.type==='flame-red'){
+  redScoreUntil=now+5000;fireColor='#ff563f';fireUntil=now+5000;
+  announceFood('INFERNO  x2 POINTS','#ff765e');
+ }else if(food.type==='heart'){
+  health=Math.min(5,health+1);
+  announceFood(health===5?'HEALTH FULL  5/5':'+1 HEALTH','#ff8fb2');
+ }else if(food.type==='lightning'){
+  lightningUntil=now+3000;hasteUntil=now+3000;
+  announceFood('SPEED  +10%','#fff27a');
+ }else if(food.type==='orb'){
+  announceFood('+'+(food.stars||1)+' POINTS','#ffc36b');
+ }
+}
+function showConfetti(){
+ const layer=el('confetti');if(!layer)return;
+ layer.innerHTML='';
+ const colors=['#ff5470','#ffd166','#06d6a0','#4cc9f0','#c77dff','#ffffff'];
+ for(let i=0;i<90;i++){
+  const bit=document.createElement('i');
+  bit.style.left=(Math.random()*100)+'%';
+  bit.style.background=colors[i%colors.length];
+  bit.style.setProperty('--drift',((Math.random()-.5)*220)+'px');
+  bit.style.animationDelay=(Math.random()*.7)+'s';
+  bit.style.animationDuration=(1.8+Math.random()*1.6)+'s';
+  layer.appendChild(bit);
+ }
+}
+function gameOver(reason='You collided with yourself or ran out of safe moves.'){
+ lost=true;stop();el('status').textContent='✖ GAME OVER';
+ el('win').innerHTML='<strong style="color:#ff9b9b">GAME OVER</strong><span id="resultText">'+reason+'</span><b id="resultScore">SCORE: '+score.toLocaleString('en-US')+'</b><div class="confetti" id="confetti"></div>';
+ el('win').style.display='flex';
+ if(controlMode==='ai')restartTimer=setTimeout(()=>{restartTimer=null;reset();start();},5000);
+}
+function celebrateWin(){
+ won=true;stop();el('status').textContent='🏆 YOU WIN';
+ el('win').innerHTML='<strong>🎉 YOU WIN!</strong><span id="resultText">You filled the entire board!</span><b id="resultScore">SCORE: '+score.toLocaleString('en-US')+'</b><div class="confetti" id="confetti"></div>';
+ el('win').style.display='flex';showConfetti();
+ if(controlMode==='ai')restartTimer=setTimeout(()=>{restartTimer=null;reset();start();},5000);
+}
+function spawnRandomBomb(now){
+ if(now<nextAutoBombAt)return;
+ const occupied=new Set([...snake.map(key),...foods.map(f=>key([f.r,f.c])),...bombs.map(b=>key([b.r,b.c]))]);
+ const free=[];
+ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(!occupied.has(key([r,c])))free.push({r,c});
+ // Each random event may create a small cluster of 1-3 bombs.
+ const requested=1+Math.floor(Math.random()*3);
+ let placed=0;
+ while(placed<requested&&free.length){
+  const index=Math.floor(Math.random()*free.length);
+  const cell=free.splice(index,1)[0];
+  if(foods.some(f=>f.r===cell.r&&f.c===cell.c))continue;
+  if(snake.some(s=>s[0]===cell.r&&s[1]===cell.c))continue;
+  if(bombs.some(b=>b.r===cell.r&&b.c===cell.c))continue;
+  bombs.push({...cell,expires:now+10000});
+  placed++;
+ }
+ if(placed>0)announceFood('WILD BOMBS  +'+placed,'#ff9a8a');
+ nextAutoBombAt=now+11000+Math.random()*9000;
+}
+
+const directionVectors={up:[-1,0],down:[1,0],left:[0,-1],right:[0,1]};
+const directionButtons=Array.from(document.querySelectorAll('.gamepad button[data-direction]'));
+function oppositeDirection(a,b){return !!a&&!!b&&a[0]===-b[0]&&a[1]===-b[1];}
+function updateControlUI(){
+ const label=running?'Ⅱ PAUSE':'▶ START';
+ ['startPause','fsStartPause'].forEach(id=>{const b=el(id);if(b)b.textContent=label;});
+ const modeLabel=controlMode==='ai'?'🤖 MODE: AI':'🎮 MODE: MANUAL';
+ const m=el('modeToggle');if(m)m.textContent=modeLabel;
+ directionButtons.forEach(b=>{
+  const d=directionVectors[b.dataset.direction];
+  const active=!!lastDir&&lastDir[0]===d[0]&&lastDir[1]===d[1];
+  b.classList.toggle('direction-active',controlMode==='ai'&&active);
+  b.classList.toggle('direction-manual',controlMode==='manual'&&active);
+  b.disabled=controlMode==='ai';
+ });
+}
+function toggleStartPause(){
+ unlockDirectionAudio();
+ if(running){stop();el('status').textContent='Ⅱ PAUSE';}
+ else start();
+ updateControlUI();
+}
+function toggleControlMode(){
+ const nextMode=controlMode==='ai'?'manual':'ai';
+ // Switching from AI to Manual always pauses first, so AI movement cannot
+ // continue in the background after the control mode has changed.
+ if(controlMode==='ai'&&nextMode==='manual'&&running){
+  stop();
+ }
+ controlMode=nextMode;
+ requestedDirection=lastDir?lastDir.slice():[0,1];
+ manualTurnPending=false;
+ const wasWaitingForManualInput=manualAwaitingFirstMove;
+ manualAwaitingFirstMove=controlMode==='manual';
+ el('status').textContent=controlMode==='ai'
+  ?(running?'● AI HUNTING FOOD':'● READY')
+  :'🎮 MANUAL READY';
+ updateControlUI();draw();
+ // If the player switches back to AI while Manual was waiting for its
+ // first direction, resume AI immediately instead of leaving the game idle.
+ if(controlMode==='ai'&&running&&wasWaitingForManualInput){
+  lastTickAt=performance.now();
+  tick();
+ }
+}
+let directionAudioContext=null,directionAudioBuffer=null,directionAudioReady=null;
+
+let pendingDirectionSound=null;
+let musicEnabled=true,sfxEnabled=true,musicVolume=.60,sfxVolume=1.95,directionVolume=.65;
+let musicGain=null,sfxGain=null,directionGain=null,musicSource=null,musicBuffer=null;
+let lastSfxAt=0;
+function ensureAudioBuses(){
+ if(!directionAudioContext)return;
+ if(!musicGain){
+  musicGain=directionAudioContext.createGain();
+  musicGain.gain.value=musicEnabled?musicVolume:0;
+  musicGain.connect(directionAudioContext.destination);
+ }
+ if(!sfxGain){
+  sfxGain=directionAudioContext.createGain();
+  sfxGain.gain.value=sfxEnabled?sfxVolume:0;
+  sfxGain.connect(directionAudioContext.destination);
+ }
+ if(!directionGain){
+  directionGain=directionAudioContext.createGain();
+  directionGain.gain.value=directionVolume;
+  directionGain.connect(directionAudioContext.destination);
+ }
+}
+function makeAmbientMusicBuffer(){
+ if(!directionAudioContext||musicBuffer)return musicBuffer;
+ const rate=directionAudioContext.sampleRate,duration=12,length=Math.floor(rate*duration);
+ musicBuffer=directionAudioContext.createBuffer(1,length,rate);
+ const data=musicBuffer.getChannelData(0);
+ // Original, gentle 12-second loop: soft plucked notes over a warm sustained pad.
+ const notes=[261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23,
+              261.63,329.63,392.00,523.25,293.66,349.23,440.00,392.00];
+ const beat=.75;
+ for(let i=0;i<notes.length;i++){
+  const start=i*beat,frequency=notes[i],begin=Math.floor(start*rate),span=Math.floor(.62*rate);
+  for(let j=0;j<span&&begin+j<length;j++){
+   const t=j/rate,env=Math.exp(-t*4.8)*Math.min(1,t*35);
+   const sample=(Math.sin(2*Math.PI*frequency*t)+.22*Math.sin(2*Math.PI*frequency*2*t))*env*.10;
+   data[begin+j]+=sample;
+  }
+ }
+ // Very quiet sustained chord bed, faded at the loop boundary.
+ const pad=[130.81,164.81,196.00];
+ for(let i=0;i<length;i++){
+  const t=i/rate,fade=Math.min(1,t/.5,(duration-t)/.5);
+  let v=0;
+  for(const f of pad)v+=Math.sin(2*Math.PI*f*t)*.012;
+  data[i]+=v*Math.max(0,fade);
+ }
+ return musicBuffer;
+}
+function startBackgroundMusic(){
+ if(!running||!musicEnabled||!directionAudioContext||directionAudioContext.state!=='running')return;
+ ensureAudioBuses();
+ if(musicSource)return;
+ try{
+  const buffer=makeAmbientMusicBuffer();
+  if(!buffer)return;
+  musicSource=directionAudioContext.createBufferSource();
+  musicSource.buffer=buffer;
+  musicSource.loop=true;
+  musicSource.connect(musicGain);
+  musicSource.start();
+ }catch(error){musicSource=null;}
+}
+function stopBackgroundMusic(){
+ if(musicSource){
+  try{musicSource.stop();}catch(error){}
+  try{musicSource.disconnect();}catch(error){}
+  musicSource=null;
+ }
+}
+function setMusicEnabled(enabled){
+ musicEnabled=!!enabled;
+ if(musicGain)musicGain.gain.setTargetAtTime(musicEnabled?musicVolume:0,directionAudioContext.currentTime,.04);
+ if(musicEnabled)startBackgroundMusic();else stopBackgroundMusic();
+}
+function setSfxEnabled(enabled){
+ sfxEnabled=!!enabled;
+ if(sfxGain&&directionAudioContext)sfxGain.gain.setTargetAtTime(sfxEnabled?sfxVolume:0,directionAudioContext.currentTime,.025);
+}
+function setMusicVolume(value){
+ musicVolume=Math.max(0,Math.min(1.2,Number(value)/100));
+ if(musicGain&&directionAudioContext)musicGain.gain.setTargetAtTime(musicEnabled?musicVolume:0,directionAudioContext.currentTime,.04);
+}
+function setSfxVolume(value){
+ sfxVolume=Math.max(0,Math.min(1.95,Number(value)/100));
+ if(sfxGain&&directionAudioContext)sfxGain.gain.setTargetAtTime(sfxEnabled?sfxVolume:0,directionAudioContext.currentTime,.025);
+}
+function setDirectionVolume(value){
+ directionVolume=Math.max(0,Math.min(1.95,Number(value)/100));
+ if(directionGain&&directionAudioContext)directionGain.gain.setTargetAtTime(directionVolume,directionAudioContext.currentTime,.025);
+}
+function playGameSfx(kind){
+  if(!sfxEnabled||!directionAudioContext||directionAudioContext.state!=='running')return;
+  const now=directionAudioContext.currentTime;
+  if(now-lastSfxAt<.045)return;
+  lastSfxAt=now;
+  ensureAudioBuses();
+
+  // Bomb: two clear descending warning pulses plus a restrained low impact.
+  if(kind==='bomb'){
+    const warningPulses=[
+      {frequency:520,delay:0,duration:.19,peak:.19,endFrequency:310},
+      {frequency:430,delay:.205,duration:.24,peak:.21,endFrequency:230}
+    ];
+    warningPulses.forEach(({frequency,delay,duration,peak,endFrequency})=>{
+      const osc=directionAudioContext.createOscillator();
+      const gain=directionAudioContext.createGain();
+      const start=now+delay;
+      const end=start+duration;
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(frequency,start);
+      osc.frequency.exponentialRampToValueAtTime(endFrequency,end);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(peak,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,end);
+      osc.connect(gain);
+      gain.connect(sfxGain);
+      osc.start(start);
+      osc.stop(end+.015);
+    });
+
+    const impact=directionAudioContext.createOscillator();
+    const impactGain=directionAudioContext.createGain();
+    const impactStart=now;
+    const impactEnd=impactStart+.16;
+    impact.type='sine';
+    impact.frequency.setValueAtTime(145,impactStart);
+    impact.frequency.exponentialRampToValueAtTime(78,impactEnd);
+    impactGain.gain.setValueAtTime(.0001,impactStart);
+    impactGain.gain.exponentialRampToValueAtTime(.12,impactStart+.01);
+    impactGain.gain.exponentialRampToValueAtTime(.0001,impactEnd);
+    impact.connect(impactGain);
+    impactGain.connect(sfxGain);
+    impact.start(impactStart);
+    impact.stop(impactEnd+.015);
+    return;
+  }
+
+  // Keep the existing food and reward sounds unchanged.
+  const tones=kind==='reward'?[660,880,1174]:[520,740];
+  const duration=kind==='reward'?.28:.16;
+  tones.forEach((frequency,index)=>{
+    const osc=directionAudioContext.createOscillator(),gain=directionAudioContext.createGain();
+    const start=now+index*.055;
+    const end=start+duration;
+    osc.type='sine';
+    osc.frequency.setValueAtTime(frequency,start);
+    gain.gain.setValueAtTime(.0001,start);
+    gain.gain.exponentialRampToValueAtTime(.12,start+.012);
+    gain.gain.exponentialRampToValueAtTime(.0001,end);
+    osc.connect(gain);gain.connect(sfxGain);
+    osc.start(start);osc.stop(end+.015);
+  });
+}
+
+function flushPendingDirectionSound(){
+ if(!pendingDirectionSound||!directionAudioContext||!directionAudioBuffer||
+    directionAudioContext.state!=='running')return false;
+ const name=pendingDirectionSound;
+ pendingDirectionSound=null;
+ return playDirectionKeySound(name);
+}
+function prepareDirectionAudio(){
+ if(directionAudioReady)return directionAudioReady;
+ directionAudioReady=(async()=>{
+  try{
+   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+   if(!AudioContextClass)return;
+   directionAudioContext=new AudioContextClass();
+   ensureAudioBuses();
+   const sound=el('directionKeySound');
+   if(!sound)return;
+   const response=await fetch(sound.src);
+   if(!response.ok)throw new Error('Audio asset unavailable');
+   directionAudioBuffer=await directionAudioContext.decodeAudioData(await response.arrayBuffer());
+   flushPendingDirectionSound();
+  }catch(error){
+   directionAudioBuffer=null;
+   pendingDirectionSound=null;
+  }
+ })();
+ return directionAudioReady;
+}
+function unlockDirectionAudio(){
+ if(!directionAudioContext)return;
+ if(directionAudioContext.state==='suspended'){
+  directionAudioContext.resume().then(()=>{
+   flushPendingDirectionSound();
+   startBackgroundMusic();
+  }).catch(()=>{});
+ }else{
+  flushPendingDirectionSound();
+  startBackgroundMusic();
+ }
+}
+function playDirectionKeySound(name){
+ if(name===lastSoundDirection)return false;
+ if(!directionAudioContext||!directionAudioBuffer||directionAudioContext.state!=='running'){
+  pendingDirectionSound=name;
+  return false;
+ }
+ try{
+  const source=directionAudioContext.createBufferSource();
+  source.buffer=directionAudioBuffer;
+  ensureAudioBuses();
+  source.connect(directionGain||directionAudioContext.destination);
+  source.start(0);
+  lastSoundDirection=name;
+  pendingDirectionSound=null;
+  return true;
+ }catch(error){
+  pendingDirectionSound=name;
+  return false;
+ }
+}
+prepareDirectionAudio();
+function setPlayerDirection(name){
+ unlockDirectionAudio();
+ if(controlMode!=='manual'||!running||won||lost)return;
+ const d=directionVectors[name];if(!d)return;
+ // Before the first manual move, allow the player to choose the initial heading.
+ // Once moving, prevent a 180-degree reversal into the neck.
+ if(!manualAwaitingFirstMove&&oppositeDirection(d,lastDir))return;
+ // Accept at most one turn between movement ticks.
+ if(manualTurnPending)return;
+ playDirectionKeySound(name);
+ requestedDirection=d.slice();
+ manualTurnPending=true;
+ directionButtons.forEach(b=>{
+  b.classList.toggle('direction-active',b.dataset.direction===name);
+ });
+ // Manual mode stays stationary after START until the first direction input.
+ // Begin the normal movement cadence only after that input.
+ if(manualAwaitingFirstMove){
+  manualAwaitingFirstMove=false;
+  lastDir=d.slice();
+  lastTickAt=performance.now();
+  if(loop)clearTimeout(loop);
+  loop=setTimeout(()=>{
+   loop=null;
+   tick();
+  },effectiveMoveDelay());
+  el('status').textContent='🎮 MANUAL CONTROL';
+ }
+}
+function getManualMove(){
+ const head=snake[0],d=requestedDirection||lastDir||[0,1];
+ const next=[head[0]+d[0],head[1]+d[1]];
+ return legalStep(next,true)?next:null;
+}
+function tick(){
+ if(!running||won||lost)return;
+ const now=performance.now();
+ bombs=bombs.filter(b=>b.expires>now);
+ spawnRandomBomb(now);
+ if(lastTickAt)timeSinceEatMs+=Math.max(0,now-lastTickAt);
+ lastTickAt=now;
+ if(timeSinceEatMs>=HUNT_TIME_LIMIT_MS){
+  update();draw();gameOver("Time's up");return;
+ }
+ // Manual mode never enters the AI planner; only AI mode runs path-search logic.
+ const head=snake[0],next=controlMode==='ai'?nextMove():getManualMove();
+ if(!next){
+  if(controlMode==='manual'){
+   const d=requestedDirection||lastDir||[0,1],candidate=[head[0]+d[0],head[1]+d[1]];
+   if(candidate[0]<0||candidate[0]>=SIZE||candidate[1]<0||candidate[1]>=SIZE){
+    gameOver('You hit the wall.');return;
+   }
+   gameOver('You ran into your body.');return;
+  }
+  gameOver('The AI could not find a safe path.');return;
+ }
+ const dir=[next[0]-head[0],next[1]-head[1]];
+ if(controlMode==='manual'){
+  requestedDirection=dir.slice();
+  manualTurnPending=false;
+ }
+ const bombIndex=bombs.findIndex(item=>item.r===next[0]&&item.c===next[1]);
+ const hitBomb=bombIndex>=0;
+ const f=foods.findIndex(item=>item.r===next[0]&&item.c===next[1]);
+ const eating=f>=0;
+ const preserveTail=eating||growthDebt>0;
+ const occupied=new Set(snake.slice(0,preserveTail?snake.length:snake.length-1).map(key));
+ if(occupied.has(key(next))){gameOver('You bit your own tail.');return;}
+
+ // Human-like AI: announce a turn with its key sound, then wait briefly before moving.
+ if(controlMode==='ai'){
+  const isTurn=!!lastDir&&(dir[0]!==lastDir[0]||dir[1]!==lastDir[1]);
+  const approved=aiTurnReadyDirection&&
+   aiTurnReadyDirection[0]===dir[0]&&aiTurnReadyDirection[1]===dir[1];
+  if(isTurn&&!approved){
+   const aiDirectionName=dir[0]===-1?'up':dir[0]===1?'down':dir[1]===-1?'left':'right';
+   playDirectionKeySound(aiDirectionName);
+   // Highlight the announced AI direction immediately, during the reaction delay.
+   directionButtons.forEach(b=>{
+    const d=directionVectors[b.dataset.direction];
+    const active=!!d&&d[0]===dir[0]&&d[1]===dir[1];
+    b.classList.toggle('direction-active',active);
+    b.classList.remove('direction-manual');
+   });
+   aiTurnReadyDirection=null;
+   aiTurnPendingDirection=dir.slice();
+   if(loop)clearTimeout(loop);
+   loop=setTimeout(()=>{
+    loop=null;
+    if(!running){aiTurnPendingDirection=null;return;}
+    aiTurnReadyDirection=aiTurnPendingDirection;
+    aiTurnPendingDirection=null;
+    tick();
+   },AI_TURN_REACTION_DELAY);
+   return;
+  }
+  if(approved)aiTurnReadyDirection=null;
+ }else{
+  aiTurnPendingDirection=null;
+  aiTurnReadyDirection=null;
+ }
+ if(lastDir&&(dir[0]!==lastDir[0]||dir[1]!==lastDir[1]))lastDir=dir;
+ updateControlUI();
+ // Snapshot only when a move is committed; AI planning and Manual input stay independent.
+ previousSnake=snake.map(part=>[part[0],part[1]]);
+ lastMoveAt=performance.now();
+ lastMoveDuration=effectiveMoveDelay(lastMoveAt);
+ snake.unshift(next);
+ if(hitBomb){
+  playGameSfx('bomb');
+  bombs.splice(bombIndex,1);announceFood('RISKY ROUTE: BOMB','#ff7777');health=Math.max(0,health-1);
+  announceFood('-1 HEALTH  '+health+'/5','#ff7777');
+  if(health<=0){update();draw();gameOver('A bomb took your last heart.');return;}
+ }
+ if(eating){
+  const eatenFood=foods.splice(f,1)[0];
+  playGameSfx(eatenFood.type==='orb'?'reward':'food');
+  let reward=0;
+  if(eatenFood.type==='orb')reward=eatenFood.stars||1;
+  
+  if(reward>0){
+   const multiplier=performance.now()<redScoreUntil?2:1;
+   score+=reward*multiplier;
+   if(multiplier===2){redScoreUntil=0;fireUntil=0;announceFood('DOUBLE REWARD  x2','#ff9b70');}
+  }
+  growthDebt+=eatenFood.type==='flame-purple'?2:1;
+  eatFlashUntil=performance.now()+420;applyFoodEffect(eatenFood);
+  timeSinceEatMs=0;lastTickAt=performance.now();
+  const desired=targetFoodCount();
+  if(foods.length<desired)spawn(desired-foods.length);
+ }
+ if(growthDebt>0)growthDebt--;
+ if(!preserveTail)snake.pop();
+ if(foods.length<targetFoodCount())spawn(targetFoodCount()-foods.length);
+ const emptyCells=SIZE*SIZE-snake.length-foods.length;
+ if(emptyCells<=50&&foods.some(food=>food.type==='flame-purple')){
+  foods.forEach(food=>{if(food.type==='flame-purple')food.type='orb';});
+ }
+ if(snake.length===SIZE*SIZE){update();draw();celebrateWin();return;}
+ update();
+ if(HUNT_TIME_LIMIT_MS-timeSinceEatMs<=5000)el('status').textContent='⚠️ 5 SECONDS LEFT!';
+ 
+ else el('status').textContent=controlMode==='ai'?'● AI HUNTING FOOD':'🎮 MANUAL CONTROL';
+ if(running)loop=setTimeout(tick,effectiveMoveDelay());
+}
+
+function animateAtmosphere(now){
+ if(!running)return;
+ if(!lastRenderTime||now-lastRenderTime>=50){
+  draw();
+  lastRenderTime=now;
+ }
+ atmosphereFrame=requestAnimationFrame(animateAtmosphere);
+}
+function start(){
+ if(won||lost)reset();
+ if(!running){
+  if(atmosphereFrame)cancelAnimationFrame(atmosphereFrame);
+  atmosphereFrame=0;
+  lastTickAt=performance.now();
+  running=true;
+  document.body.classList.remove('game-paused');
+  startBackgroundMusic();
+  el('status').textContent=controlMode==='ai'?'● AI HUNTING FOOD':'🎮 MANUAL CONTROL';
+  updateControlUI();
+  lastRenderTime=0;
+  animateAtmosphere(performance.now());
+  if(controlMode==='ai'){
+   manualAwaitingFirstMove=false;
+   tick();
+  }else{
+   // Wait for the first directional input; no movement or hunt timer starts yet.
+   manualAwaitingFirstMove=true;
+   el('status').textContent='🎮 PRESS A DIRECTION';
+  }
+ }
+}
+function drop(n){
+ if(won||lost)return;
+ const count=Math.max(0,Math.min(10,Math.floor(Number(n)||0)));
+ if(!count)return;
+ const occupied=new Set([...snake.map(key),...foods.map(f=>key([f.r,f.c])),...bombs.map(b=>key([b.r,b.c]))]);
+ const free=[];
+ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(!occupied.has(key([r,c])))free.push({r,c});
+ let placed=0;
+ while(placed<count&&free.length){
+  const index=Math.floor(Math.random()*free.length),cell=free.splice(index,1)[0];
+  if(!foods.some(f=>f.r===cell.r&&f.c===cell.c))bombs.push({...cell,expires:performance.now()+10000});
+  placed++;
+ }
+ announceFood('BOMBS  +'+placed,'#ff9a8a');
+ update();draw();
+}
+
+function seeded(r,c,n=0){
+ let x=(r*374761393+c*668265263+n*1442695041)>>>0;
+ x=(x^(x>>>13))*1274126177>>>0;
+ return (x^(x>>>16))/4294967295;
+}
+function drawGarden(ctx=cx){
+ const bg=ctx.createLinearGradient(0,0,720,720);
+ bg.addColorStop(0,'#153f31');bg.addColorStop(.48,'#1c583b');bg.addColorStop(1,'#0b3028');
+ ctx.fillStyle=bg;ctx.fillRect(0,0,720,720);
+ // Soft sunlight filtering through the canopy.
+ const glow=ctx.createRadialGradient(185,105,15,185,105,520);
+ glow.addColorStop(0,'rgba(255,239,166,.18)');glow.addColorStop(1,'rgba(255,239,166,0)');
+ ctx.fillStyle=glow;ctx.fillRect(0,0,720,720);
+ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+  const x=OFFSET+c*STEP,y=OFFSET+r*STEP,v=seeded(r,c);
+  const tile=ctx.createLinearGradient(x,y,x+STEP,y+STEP);
+  tile.addColorStop(0,v>.5?'rgba(105,164,85,.16)':'rgba(5,43,34,.12)');
+  tile.addColorStop(1,'rgba(7,36,28,.08)');
+  ctx.fillStyle=tile;ctx.fillRect(x,y,STEP,STEP);
+  // Moss and tiny grass blades.
+  for(let j=0;j<4;j++){
+   const gx=x+4+seeded(r,c,j+1)*28,gy=y+5+seeded(r,c,j+7)*26;
+   ctx.strokeStyle=j%2?'rgba(166,211,119,.23)':'rgba(7,37,25,.28)';
+   ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(gx,gy+3);ctx.quadraticCurveTo(gx-2,gy-1,gx-3,gy-4);ctx.moveTo(gx,gy+3);ctx.quadraticCurveTo(gx+2,gy-1,gx+4,gy-3);ctx.stroke();
+  }
+  // Small flowers and clover-like plants, scattered like a living meadow.
+  if(v>.76){
+   const fx=x+7+seeded(r,c,15)*22,fy=y+7+seeded(r,c,19)*22;
+   const colors=['#fff0b4','#f5a9c4','#d8c2ff','#ffe08a'];
+   const color=colors[Math.floor(seeded(r,c,22)*colors.length)];
+   ctx.fillStyle=color;
+   for(let k=0;k<5;k++){const ang=k*Math.PI*2/5;ctx.beginPath();ctx.ellipse(fx+Math.cos(ang)*3,fy+Math.sin(ang)*3,2,3,ang,0,Math.PI*2);ctx.fill();}
+   ctx.fillStyle='#f6d96b';ctx.beginPath();ctx.arc(fx,fy,1.8,0,Math.PI*2);ctx.fill();
+  }
+  if(v<.12){
+   ctx.fillStyle='rgba(191,211,154,.23)';ctx.beginPath();ctx.ellipse(x+18,y+18,5,4.1,seeded(r,c,25)*3,0,Math.PI*2);ctx.fill();
+  }
+ }
+ // Clear cell separators so each square is easy to distinguish.
+ ctx.save();
+ ctx.beginPath();
+ for(let i=0;i<=SIZE;i++){
+  const p=OFFSET+i*STEP;
+  ctx.moveTo(p,OFFSET);ctx.lineTo(p,OFFSET+SIZE*STEP);
+  ctx.moveTo(OFFSET,p);ctx.lineTo(OFFSET+SIZE*STEP,p);
+ }
+ ctx.strokeStyle='rgba(225,255,218,.24)';
+ ctx.lineWidth=1.15;
+ ctx.stroke();
+ // Slightly stronger outer edge for a clean board boundary.
+ ctx.strokeStyle='rgba(203,239,178,.42)';
+ ctx.lineWidth=2;
+ ctx.strokeRect(OFFSET,OFFSET,SIZE*STEP,SIZE*STEP);
+ ctx.restore();
+ // Delicate vine-like border around the garden board.
+ ctx.save();ctx.strokeStyle='rgba(123,202,125,.48)';ctx.lineWidth=3;
+ ctx.beginPath();if(ctx.roundRect){ctx.roundRect(OFFSET-5,OFFSET-5,SIZE*STEP+10,SIZE*STEP+10,18);}else{ctx.rect(OFFSET-5,OFFSET-5,SIZE*STEP+10,SIZE*STEP+10);}ctx.stroke();
+ for(let i=0;i<13;i++){
+  const x=OFFSET+12+i*44;
+  ctx.fillStyle=i%2?'rgba(133,207,123,.55)':'rgba(194,225,143,.5)';
+  ctx.beginPath();ctx.ellipse(x,OFFSET-6,5,2, -.4,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x,OFFSET+SIZE*STEP+6,5,2,.4,0,Math.PI*2);ctx.fill();
+ }
+ ctx.restore();
+}
+
+function drawAtmosphere(ctx,time){
+ const left=OFFSET+8,right=OFFSET+SIZE*STEP-8,top=OFFSET+8,bottom=OFFSET+SIZE*STEP-8,width=right-left,height=bottom-top;
+ for(let i=0;i<3;i++){
+  const speed=[7,11,5][i],x=left+((time*speed/1000+i*width*.43)%(width+150))-70,y=top+height*(.22+i*.27);
+  ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#d9f5df';ctx.shadowBlur=0;
+  ctx.beginPath();ctx.ellipse(x,y,38,8,0,0,Math.PI*2);ctx.ellipse(x+20,y-4,22,10,0,0,Math.PI*2);ctx.ellipse(x-19,y-2,19,7,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+ for(let i=0;i<7;i++){
+  const speed=13+(i%3)*5,x=left+((time*speed/1000+i*97)%(width+30))-15,y=top+((i*83+time*(5+(i%2)*2)/1000)%(height+18))-9,rot=time/1800+i*1.7;
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=.34;ctx.fillStyle=i%2?'#b7d987':'#e1d99a';
+  ctx.beginPath();ctx.ellipse(0,0,7,4.1,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(40,83,47,.55)';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.stroke();ctx.restore();
+ }
+}
+
+const gardenCanvas=document.createElement('canvas');
+gardenCanvas.width=720;gardenCanvas.height=720;
+const gardenCtx=gardenCanvas.getContext('2d');
+drawGarden(gardenCtx);
+
+function drawFruit(food){
+ const x=OFFSET+food.c*STEP+STEP/2,y=OFFSET+food.r*STEP+STEP/2,t=performance.now()/1000;
+ cx.save();cx.translate(x,y);
+ const bob=Math.sin(t*3+food.r+food.c)*2.2;cx.translate(0,bob);
+ const glow=food.type==='flame-blue'?'#45b9ff':food.type==='flame-purple'?'#bd73ff':food.type==='flame-red'?'#ff563f':food.type==='lightning'?'#fff078':food.type==='heart'?'#ff6b9a':'#ff9a27';
+ cx.shadowColor=food.type==='orb'&&food.stars===7?'#fff0a0':glow;cx.shadowBlur=food.type==='orb'&&food.stars===7?28:7;
+ if(food.type==='orb'){
+  const g=cx.createRadialGradient(-8,-10,2,0,0,23);
+  g.addColorStop(0,'#fff5c6');g.addColorStop(.2,'#ffc85c');g.addColorStop(.58,'#f28a19');g.addColorStop(1,'#9c3b08');
+  cx.fillStyle=g;cx.beginPath();cx.arc(0,0,19,0,Math.PI*2);cx.fill();
+  cx.shadowBlur=0;const count=Math.max(1,Math.min(7,food.stars||1));
+  for(let i=0;i<count;i++){
+   const a=Math.PI*2*i/count-Math.PI/2,rr=count===1?0:9,sx=Math.cos(a)*rr,sy=Math.sin(a)*rr;
+   cx.fillStyle='#b51f18';cx.beginPath();
+   for(let k=0;k<10;k++){const an=-Math.PI/2+k*Math.PI/5,rad=k%2===0?4.1:1.5,px=sx+Math.cos(an)*rad,py=sy+Math.sin(an)*rad;if(k===0)cx.moveTo(px,py);else cx.lineTo(px,py);}
+   cx.closePath();cx.fill();
+  }
+  cx.fillStyle='#fff4b0';cx.font='bold 12px system-ui';cx.textAlign='center';cx.fillText('★'.repeat(Math.max(1,Math.min(7,food.stars||1))),0,34);
+  if(food.stars===7){
+   const pulse=1+Math.sin(t*5)*.10;
+   cx.save();cx.rotate(t*.45);cx.globalAlpha=.88;
+   cx.strokeStyle='#fff0a0';cx.lineWidth=2.2;cx.shadowColor='#ffe36e';cx.shadowBlur=22;
+   cx.beginPath();cx.arc(0,0,27*pulse,0,Math.PI*2);cx.stroke();
+   cx.globalAlpha=.65;cx.lineWidth=1.2;cx.beginPath();cx.arc(0,0,33*pulse,0,Math.PI*2);cx.stroke();
+   for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,rr=38*pulse;
+    cx.fillStyle='#fff6bd';cx.beginPath();cx.arc(Math.cos(a)*rr,Math.sin(a)*rr,2.2,0,Math.PI*2);cx.fill();
+   }
+   cx.restore();
+  }
+ }else if(food.type==='heart'){
+  cx.shadowColor='#ff477e';cx.shadowBlur=16;cx.fillStyle='#ff477e';
+  cx.beginPath();cx.moveTo(0,19);cx.bezierCurveTo(-28,1,-17,-17,-4,-10);cx.quadraticCurveTo(0,-7,0,-2);cx.quadraticCurveTo(8,-20,21,-9);cx.bezierCurveTo(34,4,14,16,0,19);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.7)';cx.beginPath();cx.arc(-8,-7,3,0,Math.PI*2);cx.fill();
+ }else if(food.type.startsWith('flame-')){
+  const palette=food.type==='flame-blue'?['#e7fbff','#54caff','#176be8']:food.type==='flame-purple'?['#fff0ff','#d58bff','#7733d2']:['#fff2bd','#ff8a42','#cf2638'];
+  const flame=cx.createLinearGradient(0,-22,0,20);flame.addColorStop(0,palette[0]);flame.addColorStop(.45,palette[1]);flame.addColorStop(1,palette[2]);
+  cx.fillStyle=flame;cx.beginPath();cx.moveTo(0,21);cx.bezierCurveTo(-19,13,-17,-1,-7,-10);cx.quadraticCurveTo(-8,-20,1,-25);cx.quadraticCurveTo(0,-11,9,-9);cx.bezierCurveTo(23,5,13,18,0,21);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.75)';cx.beginPath();cx.moveTo(0,13);cx.quadraticCurveTo(-7,3,-1,-6);cx.quadraticCurveTo(2,1,6,5);cx.quadraticCurveTo(8,11,0,13);cx.fill();
+ }else if(food.type==='lightning'){
+  cx.fillStyle='#fff27a';cx.strokeStyle='#fffbe0';cx.lineWidth=1.3;cx.beginPath();
+  cx.moveTo(4,-24);cx.lineTo(-12,1);cx.lineTo(-2,1);cx.lineTo(-7,23);cx.lineTo(14,-7);cx.lineTo(3,-7);cx.closePath();cx.fill();cx.stroke();
+  cx.fillStyle='rgba(255,255,255,.65)';cx.beginPath();cx.arc(-14,-14,3,0,Math.PI*2);cx.arc(15,14,2.5,0,Math.PI*2);cx.fill();
+ }
+ cx.restore();
+}
+
+function drawBomb(bomb){
+ const x=OFFSET+bomb.c*STEP+STEP/2,y=OFFSET+bomb.r*STEP+STEP/2;
+ const left=Math.max(0,bomb.expires-performance.now()),pulse=.75+.25*Math.sin(performance.now()/65);
+ cx.save();cx.translate(x,y);cx.globalAlpha=.8+.2*pulse;
+ cx.shadowColor='#ff4b35';cx.shadowBlur=14;cx.fillStyle='#252a32';
+ cx.beginPath();cx.arc(0,4,15,0,Math.PI*2);cx.fill();
+ cx.strokeStyle='#aeb8c5';cx.lineWidth=3;cx.beginPath();cx.moveTo(4,-9);cx.quadraticCurveTo(10,-20,15,-18);cx.stroke();
+ cx.fillStyle='#ffb347';cx.shadowColor='#ff6b32';cx.shadowBlur=12;
+ cx.beginPath();cx.moveTo(15,-18);cx.quadraticCurveTo(9,-27,18,-29);cx.quadraticCurveTo(25,-23,15,-18);cx.fill();
+ cx.fillStyle='#fff';cx.font='bold 10px system-ui';cx.textAlign='center';cx.fillText((left/1000).toFixed(1),0,29);
+ cx.restore();
+}
+function smoothPoints(points){
+ // Rounded, non-overshooting corners: keep the body centerline stable
+ // instead of using Catmull-Rom curves that can bulge at tight 90-degree turns.
+ if(points.length<3)return points;
+ const out=[points[0]];
+ const cornerCut=STEP*.22;
+ for(let i=1;i<points.length-1;i++){
+  const prev=points[i-1],cur=points[i],next=points[i+1];
+  const dx1=prev[0]-cur[0],dy1=prev[1]-cur[1];
+  const dx2=next[0]-cur[0],dy2=next[1]-cur[1];
+  const len1=Math.hypot(dx1,dy1),len2=Math.hypot(dx2,dy2);
+  if(len1<.001||len2<.001){out.push(cur);continue;}
+  const cut=Math.min(cornerCut,len1*.22,len2*.22);
+  const start=[cur[0]+dx1/len1*cut,cur[1]+dy1/len1*cut];
+  const end=[cur[0]+dx2/len2*cut,cur[1]+dy2/len2*cut];
+  const last=out[out.length-1];
+  if(Math.hypot(start[0]-last[0],start[1]-last[1])>.01)out.push(start);
+  // Quadratic corner rounding stays inside the turn; it cannot overshoot
+  // and inflate/contract the apparent body width.
+  for(let j=1;j<=4;j++){
+   const t=j/4,u=1-t;
+   out.push([
+    u*u*start[0]+2*u*t*cur[0]+t*t*end[0],
+    u*u*start[1]+2*u*t*cur[1]+t*t*end[1]
+   ]);
+  }
+ }
+ const tail=points[points.length-1],last=out[out.length-1];
+ if(Math.hypot(tail[0]-last[0],tail[1]-last[1])>.01)out.push(tail);
+ return out;
+}
+function drawSnake(){
+ if(!snake.length)return;
+ const renderNow=performance.now();
+ const progress=running&&previousSnake&&lastMoveAt?Math.max(0,Math.min(1,(renderNow-lastMoveAt)/Math.max(1,lastMoveDuration))):1;
+ const centers=snake.map((p,i)=>{
+  const from=previousSnake&&previousSnake[i]?previousSnake[i]:p;
+  const row=from[0]+(p[0]-from[0])*progress;
+  const col=from[1]+(p[1]-from[1])*progress;
+  return [OFFSET+col*STEP+STEP/2,OFFSET+row*STEP+STEP/2];
+ });
+ const pts=smoothPoints(centers);
+ cx.save();cx.lineCap='round';cx.lineJoin='round';
+ const path=new Path2D();
+ path.moveTo(pts[pts.length-1][0],pts[pts.length-1][1]);
+ for(let i=pts.length-2;i>=0;i--)path.lineTo(pts[i][0],pts[i][1]);
+
+ // Flame Red Inferno aura: warm red outline while the next-food multiplier is active.
+ if(renderNow<redScoreUntil){
+  const pulse=.78+.22*Math.sin(renderNow/85);
+  cx.save();cx.globalAlpha=.82*pulse;cx.strokeStyle='#ff3d32';cx.lineWidth=47;
+  cx.shadowColor='#ff2418';cx.shadowBlur=24;cx.stroke(path);
+  cx.globalAlpha=.9*pulse;cx.strokeStyle='#ffb06a';cx.lineWidth=3;cx.shadowBlur=9;cx.stroke(path);
+  cx.restore();
+ }
+
+ // Flame Blue: soft cyan outline and a few animated flame sparks around the snake.
+ // This is drawn only during the 2.8-second slow effect and uses a small fixed loop.
+ if(renderNow<slowUntil){
+  const pulse=.72+.28*Math.sin(renderNow/75);
+  cx.save();cx.globalAlpha=.72*pulse;cx.strokeStyle='#55cfff';
+  cx.lineWidth=43;cx.shadowColor='#39bfff';cx.shadowBlur=19;cx.stroke(path);
+  cx.globalAlpha=.9*pulse;cx.strokeStyle='rgba(190,246,255,.9)';
+  cx.lineWidth=2.2;cx.shadowBlur=8;cx.stroke(path);
+  cx.shadowBlur=0;
+  const t=renderNow/180;
+  const stride=Math.max(7,Math.floor(pts.length/9));
+  for(let i=4;i<pts.length-3;i+=stride){
+   const q=pts[(i+Math.floor(t*2))%pts.length];
+   const phase=t+i*.73,side=Math.sin(phase)*13;
+   const fx=q[0]+side,fy=q[1]-10-Math.abs(Math.sin(phase*1.4))*7;
+   cx.fillStyle=i%2?'#8beaff':'#d9fbff';
+   cx.beginPath();cx.moveTo(fx,fy+6);cx.quadraticCurveTo(fx-5,fy,fx,fy-7);
+   cx.quadraticCurveTo(fx+5,fy,fx,fy+6);cx.fill();
+  }
+  cx.restore();
+ }
+
+ // A continuous, rounded jade body with a deep forest shadow.
+ cx.save();cx.translate(2,7);cx.shadowColor='rgba(0,0,0,.62)';cx.shadowBlur=10;
+ cx.strokeStyle='rgba(0,0,0,.7)';cx.lineWidth=40;cx.stroke(path);cx.restore();
+ const flash=Math.max(0,(eatFlashUntil-renderNow)/420);
+ cx.shadowColor=flash>0?'rgba(255,235,135,'+(0.95*flash)+')':'rgba(52,255,174,.42)';
+ cx.shadowBlur=flash>0?18*flash:(snake.length>35?4:7);
+ cx.strokeStyle='#023a35';cx.lineWidth=37;cx.stroke(path);cx.shadowBlur=0;
+ const body=cx.createLinearGradient(0,-20,0,20);
+ body.addColorStop(0,'#b8f8c8');body.addColorStop(.18,'#38c98d');
+ body.addColorStop(.48,'#087b61');body.addColorStop(.78,'#075044');body.addColorStop(1,'#022d35');
+ cx.strokeStyle=body;cx.lineWidth=32;cx.stroke(path);
+
+ // Clip all scale detail to the actual body stroke so no scales float outside it.
+ cx.save();cx.lineWidth=31;cx.strokeStyle=body;cx.stroke(path);cx.clip();
+ for(let i=7;i<pts.length-5;i+=(snake.length>35?16:11)){
+  const q=pts[i],a=pts[Math.max(0,i-2)],b=pts[Math.min(pts.length-1,i+2)];
+  const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  cx.save();cx.translate(q[0],q[1]);cx.rotate(ang);
+  // Short curved scale seams, following the body's surface.
+  cx.strokeStyle='rgba(196,255,215,.42)';cx.lineWidth=1.25;
+  cx.beginPath();cx.moveTo(-5,-9);cx.quadraticCurveTo(0,-3,5,-9);cx.stroke();
+  cx.strokeStyle='rgba(0,47,43,.35)';cx.beginPath();cx.moveTo(-5,9);cx.quadraticCurveTo(0,3,5,9);cx.stroke();
+  cx.restore();
+ }
+ cx.restore();
+
+ // Temporary elemental aura effects applied by collected items.
+ const nowFx=renderNow;
+ if(nowFx<fireUntil){
+  cx.save();cx.globalAlpha=.8;
+  for(let i=8;i<pts.length-4;i+=7){
+   const q=pts[i],a=pts[Math.max(0,i-2)],b=pts[Math.min(pts.length-1,i+2)],ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+   cx.save();cx.translate(q[0],q[1]);cx.rotate(ang);
+   cx.shadowColor=fireColor;cx.shadowBlur=13;cx.fillStyle=fireColor;
+   cx.beginPath();cx.moveTo(-4,0);cx.quadraticCurveTo(-13,-12,-3,-18);cx.quadraticCurveTo(-2,-8,4,-7);cx.quadraticCurveTo(12,-1,4,5);cx.closePath();cx.fill();cx.restore();
+  }
+  cx.restore();
+ }
+ if(nowFx<lightningUntil){
+  cx.save();cx.globalAlpha=.9;cx.strokeStyle='#fff27a';cx.lineWidth=2.2;cx.shadowColor='#fff27a';cx.shadowBlur=13;
+  for(let i=9;i<pts.length-5;i+=13){
+   const q=pts[i],a=pts[Math.max(0,i-2)],b=pts[Math.min(pts.length-1,i+2)],ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+   cx.save();cx.translate(q[0],q[1]);cx.rotate(ang);cx.beginPath();cx.moveTo(0,-9);cx.lineTo(-5,-16);cx.lineTo(3,-20);cx.lineTo(0,-27);cx.stroke();cx.restore();
+  }
+  cx.restore();
+ }
+
+ // Bold original anime-inspired Eastern dragon head: swept horns, flame mane and fierce eyes.
+ const [hx,hy]=centers[0],d=lastDir||[0,1],angle=Math.atan2(d[0],d[1]);
+ cx.save();cx.translate(hx,hy);cx.rotate(angle);cx.scale(1.24,1.24);
+ cx.shadowColor='rgba(69,255,190,.5)';cx.shadowBlur=9;
+
+ // Back-swept mane spikes, like a dynamic fantasy anime creature.
+ const mane=cx.createLinearGradient(-35,-30,5,30);
+ mane.addColorStop(0,'#fff0a8');mane.addColorStop(.35,'#e0a447');mane.addColorStop(.72,'#39bd8b');mane.addColorStop(1,'#075044');
+ cx.fillStyle=mane;
+ for(const side of [-1,1]){
+  cx.beginPath();cx.moveTo(-9,side*5);cx.quadraticCurveTo(-27,side*9,-43,side*25);
+  cx.quadraticCurveTo(-30,side*17,-28,side*29);cx.quadraticCurveTo(-13,side*19,-2,side*12);cx.closePath();cx.fill();
+  cx.beginPath();cx.moveTo(-14,side*8);cx.quadraticCurveTo(-33,side*18,-35,side*36);
+  cx.quadraticCurveTo(-20,side*24,-4,side*14);cx.closePath();cx.fill();
+ }
+
+ // Two swept-back antler horns.
+ const horn=cx.createLinearGradient(-30,-42,-5,-10);
+ horn.addColorStop(0,'#fff6d5');horn.addColorStop(.45,'#e9bd68');horn.addColorStop(1,'#81502d');
+ cx.fillStyle=horn;
+ for(const side of [-1,1]){
+  cx.beginPath();cx.moveTo(-13,side*12);cx.quadraticCurveTo(-39,side*25,-34,side*47);
+  cx.quadraticCurveTo(-23,side*35,-22,side*24);cx.quadraticCurveTo(-12,side*20,-3,side*15);cx.closePath();cx.fill();
+ }
+
+ // Strong skull silhouette and bright jade face.
+ cx.fillStyle='#012d31';cx.beginPath();
+ cx.moveTo(31,0);cx.quadraticCurveTo(22,-25,-4,-25);cx.quadraticCurveTo(-27,-24,-30,-8);
+ cx.quadraticCurveTo(-38,0,-30,8);cx.quadraticCurveTo(-24,24,-3,24);
+ cx.quadraticCurveTo(22,22,31,0);cx.fill();
+ const face=cx.createLinearGradient(-25,-25,25,25);
+ face.addColorStop(0,'#e4ffd0');face.addColorStop(.24,'#72e6a7');
+ face.addColorStop(.56,'#16a979');face.addColorStop(1,'#03483f');
+ cx.fillStyle=face;cx.beginPath();
+ cx.moveTo(29,0);cx.quadraticCurveTo(21,-20,-4,-20);cx.quadraticCurveTo(-24,-19,-26,-6);
+ cx.quadraticCurveTo(-32,0,-26,6);cx.quadraticCurveTo(-18,19,-3,19);
+ cx.quadraticCurveTo(20,18,29,0);cx.fill();
+
+ // Brow ridges and vivid crimson-gold eyes.
+ cx.fillStyle='#075044';cx.beginPath();
+ cx.ellipse(0,-10,11,6,-.16,0,Math.PI*2);cx.ellipse(0,10,11,6,.16,0,Math.PI*2);cx.fill();
+ cx.fillStyle='#ffb45f';cx.beginPath();
+ cx.ellipse(2,-10,6.8,4.5,0,0,Math.PI*2);cx.ellipse(2,10,6.8,4.5,0,0,Math.PI*2);cx.fill();
+ cx.fillStyle='#b62424';cx.beginPath();
+ cx.ellipse(4,-10,1.8,4.1,0,0,Math.PI*2);cx.ellipse(4,10,1.8,4.1,0,0,Math.PI*2);cx.fill();
+ cx.strokeStyle='#f9d57e';cx.lineWidth=4.1;cx.beginPath();
+ cx.moveTo(-9,-15);cx.quadraticCurveTo(0,-22,10,-15);
+ cx.moveTo(-9,15);cx.quadraticCurveTo(0,22,10,15);cx.stroke();
+
+ // Long dragon muzzle, nostrils, fangs and a gold nose ridge.
+ const muzzle=cx.createLinearGradient(10,-12,32,12);
+ muzzle.addColorStop(0,'#b6f5ae');muzzle.addColorStop(.55,'#28b982');muzzle.addColorStop(1,'#075b50');
+ cx.fillStyle=muzzle;cx.beginPath();cx.ellipse(19,0,14,11,0,0,Math.PI*2);cx.fill();
+ cx.fillStyle='#123b31';cx.beginPath();cx.arc(26,-4,1.8,0,Math.PI*2);cx.arc(26,4,1.8,0,Math.PI*2);cx.fill();
+ // Smooth muzzle: no thin gold whisker or mouth strands across the face.
+ cx.restore();cx.restore();
+ if(foodNotice&&renderNow<foodNotice.until){
+  const remaining=Math.max(0,(foodNotice.until-renderNow)/1350);
+  const rise=(1-remaining)*24;
+  cx.save();cx.globalAlpha=Math.min(1,remaining*1.25);
+  cx.font='bold 19px system-ui, sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+  const label=foodNotice.text,w=cx.measureText(label).width+24;
+  const nx=hx,ny=Math.max(28,hy-48-rise);
+  cx.fillStyle='rgba(4,28,25,.88)';cx.strokeStyle=foodNotice.color;cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(nx-w/2,ny-15,w,30,12);cx.fill();cx.stroke();
+  cx.shadowColor=foodNotice.color;cx.shadowBlur=9;cx.fillStyle=foodNotice.color;
+  cx.fillText(label,nx,ny);cx.restore();
+ }else if(foodNotice&&renderNow>=foodNotice.until)foodNotice=null;
+ if(flash>0){
+  cx.save();cx.globalAlpha=flash*.75;cx.strokeStyle='#fff3a6';cx.lineWidth=4;
+  cx.shadowColor='#fff0a0';cx.shadowBlur=20;cx.stroke(path);cx.restore();
+ }
+}
+
+function draw(){
+ cx.clearRect(0,0,720,720);
+ cx.drawImage(gardenCanvas,0,0);
+ foods.forEach(drawFruit);bombs.forEach(drawBomb);
+ drawSnake();
+ drawAtmosphere(cx,performance.now());
+}
+const soundPanel=el('soundPanel'),soundToggle=el('soundSettingsToggle');
+soundToggle.onclick=()=>{
+ const opening=soundPanel.hidden;
+ soundPanel.hidden=!opening;
+ soundToggle.setAttribute('aria-expanded',String(opening));
+};
+el('musicEnabled').onchange=e=>setMusicEnabled(e.target.checked);
+el('sfxEnabled').onchange=e=>setSfxEnabled(e.target.checked);
+function updateSoundButton(){
+ const active=musicEnabled||sfxEnabled;
+ soundToggle.textContent=active?'♫ SOUND: ON':'♫ SOUND: OFF';
+}
+el('musicEnabled').addEventListener('change',updateSoundButton);
+el('sfxEnabled').addEventListener('change',updateSoundButton);
+el('musicVolume').oninput=e=>{
+ setMusicVolume(e.target.value);
+ el('musicVolumeLabel').textContent=e.target.value+'%';
+};
+el('sfxVolume').oninput=e=>{
+ setSfxVolume(e.target.value);
+ el('sfxVolumeLabel').textContent=e.target.value+'%';
+};
+el('directionVolume').oninput=e=>{
+ setDirectionVolume(e.target.value);
+ el('directionVolumeLabel').textContent=e.target.value+'%';
+};
+el('startPause').onclick=toggleStartPause;
+el('fsStartPause').onclick=toggleStartPause;
+el('modeToggle').onclick=toggleControlMode;
+directionButtons.forEach(b=>{
+ const name=b.dataset.direction;
+ b.addEventListener('pointerdown',e=>{e.preventDefault();setPlayerDirection(name);});
+});
+el('reset').onclick=reset;
+document.querySelectorAll('[data-bomb]').forEach(b=>b.onclick=()=>drop(+b.dataset.bomb));
+el('speed').onclick=()=>{speedIndex=(speedIndex+1)%3;speed=speeds[speedIndex];el('speed').textContent='⚡ SPEED: '+speedNames[speedIndex];if(running){stop();start();}};
+el('full').onclick=async()=>{
+ try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();document.body.classList.add('game-fullscreen');}else await document.exitFullscreen();}
+ catch(e){document.body.classList.toggle('game-fullscreen');}
+};
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('game-fullscreen');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBackgroundMusic();if(running){stop();el('status').textContent='Ⅱ PAUSED IN BACKGROUND';}}else if(running)startBackgroundMusic();});
+try{reset();}catch(err){
+ console.error('Snake game initialization failed:',err);
+ const status=document.getElementById('status');
+ if(status)status.textContent='INITIALIZATION ERROR: '+(err&&err.message?err.message:'Unknown error');
+ const canvas=document.getElementById('board'),context=canvas&&canvas.getContext('2d');
+ if(context){context.fillStyle='#102b3b';context.fillRect(0,0,720,720);context.fillStyle='#fff';context.font='bold 22px system-ui';context.textAlign='center';context.fillText('Unable to start the game',360,330);}
+ }
+})();
+</script>
+
+
+</body></html>
